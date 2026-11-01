@@ -9,9 +9,9 @@ const { originGuard } = require('./middleware/originGuard');
 
 const app = express();
 
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'https://deepax.netlify.app/')
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
   .split(',')
-  .map((s) => s.trim())
+  .map((s) => s.trim().replace(/\/+$/, '')) // trims whitespace and removes trailing slashes
   .filter(Boolean);
 
 app.disable('x-powered-by');
