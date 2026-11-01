@@ -1,25 +1,31 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
-const { COOKIE_NAME } = require('../middleware/auth');
+const { COOKIE_NAME, readAdmin } = require('../middleware/auth');
 const { clean } = require('../utils/sanitize');
 
 // Compared against when the email is unknown so response timing does not reveal valid accounts.
 const DUMMY_HASH = bcrypt.hashSync('timing-equalizer-not-a-real-password', 12);
 
-const cookieOptions = () => ({
-  httpOnly: true,
-  sameSite: 'lax',
-  secure: process.env.NODE_ENV === 'production',
-  path: '/',
-});
+// COOKIE_SAMESITE=lax (default) when frontend and API share a site.
+// COOKIE_SAMESITE=none when they are on different domains (requires HTTPS).
+function cookieOptions() {
+  const production = process.env.NODE_ENV === 'production';
+  const crossSite = (process.env.COOKIE_SAMESITE || 'lax').toLowerCase() === 'none';
+  return {
+    httpOnly: true,
+    sameSite: crossSite ? 'none' : 'lax',
+    secure: production || crossSite,
+    path: '/',
+  };
+}
 
 async function login(req, res, next) {
   try {
     const secret = process.env.JWT_SECRET;
     if (!secret || secret.length < 32) {
       return res.status(500).json({
-        message: 'Server misconfigured: set JWT_SECRET (32+ characters) in server/.env and restart the API',
+        message: 'Server misconfigured: set JWT_SECRET (32+ characters) in the API environment and restart',
       });
     }
 
@@ -47,10 +53,14 @@ async function login(req, res, next) {
   }
 }
 
+// Always returns 200. Visitors who are not logged in get { admin: null }, so no error appears in the console.
 async function me(req, res, next) {
   try {
-    const admin = await Admin.findById(req.admin.id);
-    if (!admin) return res.status(401).json({ message: 'Session is no longer valid' });
+    const session = readAdmin(req);
+    if (!session) return res.json({ admin: null });
+
+    const admin = await Admin.findById(session.id);
+    if (!admin) return res.json({ admin: null });
     res.json({ admin: { email: admin.email, name: admin.name } });
   } catch (err) {
     next(err);
