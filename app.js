@@ -9,7 +9,7 @@ const { originGuard } = require('./middleware/originGuard');
 
 const app = express();
 
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'https://deppax.netlify.app/')
   .split(',')
   .map((s) => s.trim().replace(/\/+$/, '')) // trims whitespace and removes trailing slashes
   .filter(Boolean);
