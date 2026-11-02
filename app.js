@@ -5,22 +5,23 @@ const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const apiRoutes = require('./routes');
 const { notFound, errorHandler } = require('./middleware/error');
-const { originGuard, parseAllowedOrigins } = require('./middleware/originGuard');
+const { originGuard } = require('./middleware/originGuard');
 
 const app = express();
-const allowedOrigins = parseAllowedOrigins(process.env.CLIENT_ORIGIN);
+
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'https://deepaxs.netlify.app/')
+  .split(',')
+  .map((s) => s.trim().replace(/\/+$/, '')) // trims whitespace and removes trailing slashes
+  .filter(Boolean);
 
 app.disable('x-powered-by');
-
-// Required when hosted behind a proxy (Render, Railway, Heroku, nginx).
-if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
-
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
+// Exact-origin credentialed CORS. Requests from other origins receive no CORS headers.
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin.replace(/\/+$/, ''))) return callback(null, true);
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
       return callback(null, false);
     },
     credentials: true,
@@ -35,11 +36,18 @@ app.use(originGuard(allowedOrigins));
 app.use('/api', (req, res, next) => {
   if (req.path === '/health' || mongoose.connection.readyState === 1) return next();
   return res.status(503).json({
-    message: 'Database unavailable. Confirm MongoDB is running and MONGODB_URI is correct, then restart the API.',
+    message: 'Database unavailable. Confirm MongoDB is running and MONGODB_URI in server/.env is correct, then restart the API.',
   });
 });
 
 app.use('/api', apiRoutes);
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'API is running successfully',
+    documentation: '/api' // or whatever is appropriate
+  });
+});
 app.use(notFound);
 app.use(errorHandler);
 
