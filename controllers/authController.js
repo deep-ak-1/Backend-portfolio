@@ -56,12 +56,26 @@ async function login(req, res, next) {
 // Always returns 200. Visitors who are not logged in get { admin: null }, so no error appears in the console.
 async function me(req, res, next) {
   try {
+    res.set('Cache-Control', 'no-store');
+
     const session = readAdmin(req);
-    if (!session) return res.json({ admin: null });
+
+    if (!session) {
+      return res.json({ admin: null });
+    }
 
     const admin = await Admin.findById(session.id);
-    if (!admin) return res.json({ admin: null });
-    res.json({ admin: { email: admin.email, name: admin.name } });
+
+    if (!admin) {
+      return res.json({ admin: null });
+    }
+
+    res.json({
+      admin: {
+        email: admin.email,
+        name: admin.name
+      }
+    });
   } catch (err) {
     next(err);
   }
