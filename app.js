@@ -10,33 +10,42 @@ const { originGuard } = require('./middleware/originGuard');
 const app = express();
 
 // Cleaned allowed origins list (guaranteed no trailing slashes)
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'https://deepak-s-portfli0-0fficial.vercel.app')
-  .split(',')
-  .map((s) => s.trim().replace(/\/+$/, ''))
-  .filter(Boolean);
+
+const allowedOrigins = [
+  'https://deepak-s-portfli0-0fficial-2u98r17qu-dee-ac95.vercel.app',
+  'https://deepak-s-portfli0-0fficial.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
 
 app.disable('x-powered-by');
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-// 1. CORS MUST be registered first so preflight OPTIONS requests pass instantly
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Allow server-to-server requests, Postman, or matches from allowed origins
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(null, false);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    optionsSuccessStatus: 200,
-  })
-);
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept'
+  ],
+  optionsSuccessStatus: 200
+}));
 
 app.use(cookieParser());
 app.use(express.json({ limit: '100kb' }));
+
 
 // 2. Place originGuard AFTER cors so it doesn't block preflight headers or valid API requests
 if (typeof originGuard === 'function') {
