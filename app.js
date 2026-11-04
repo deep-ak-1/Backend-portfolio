@@ -9,7 +9,7 @@ const { originGuard } = require('./middleware/originGuard');
 
 const app = express();
 
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'https://deepak-s-portflio-0fficial.vercel.app/')
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'https://deepak-s-portfli0-0fficial.vercel.app/')
   .split(',')
   .map((s) => s.trim().replace(/\/+$/, '')) // trims whitespace and removes trailing slashes
   .filter(Boolean);
